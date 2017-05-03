@@ -1,3 +1,4 @@
+#coding=utf-8
 import os
 import sys
 import json
@@ -24,14 +25,16 @@ for name in names:
     shortName = u"{0} {1}".format(nameParts[0], nameParts[-1])
     #print idUrl+'&apiKey={0}'.format(capiKey)
     print shortName
-    search = requests.get('https://api.cognitive.microsoft.com/bing/v5.0/images/search?q={0}&count=5&mrkt=en-GB'.format(shortName), headers= {'Ocp-Apim-Subscription-Key': msKey})
+    asciiName = unicode(shortName).encode('ascii', 'replace')
+    search = requests.get('https://api.cognitive.microsoft.com/bing/v5.0/images/search?q={0}&count=5&mrkt=en-GB'.format(asciiName), headers= {'Ocp-Apim-Subscription-Key': msKey})
     print search.status_code
     for count, image in enumerate(search.json()['value']):
-        imageReq = requests.get(image['contentUrl'], stream=True)
-        with open("candidates/{0}-{1}.jpg".format(shortName.replace(' ', '-'),count), 'wb') as imageFile:
-            for chunk in imageReq.iter_content(chunk_size=1024):
-                imageFile.write(chunk)
-
-    break
+        try:
+            imageReq = requests.get(image['contentUrl'], stream=True)
+            with open("candidates/{0}-{1}.jpg".format(asciiName.replace(' ', '-'),count), 'wb') as imageFile:
+                for chunk in imageReq.iter_content(chunk_size=1024):
+                    imageFile.write(chunk)
+        except Exception as e:
+            print "unable to save image: {0}".format(e)
 
 
