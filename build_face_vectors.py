@@ -1,6 +1,7 @@
 import sys
 import os
 import glob
+import pickle
 import face_recognition
 # hacked from the dlib example:
 # http://dlib.net/face_landmark_detection.py.html
@@ -23,7 +24,6 @@ def getName(name):
     candidates/Donald-Tusk-1.jpg
     """
 
-    print name
     # is there a / in the string?
     if '/' in name:
         #remove the directory fluff and return the last part only
@@ -39,33 +39,45 @@ def getName(name):
 
 
 faceDb = {}
-
+personDb = {}
 # Now process all the images
 for f in glob.glob(os.path.join(faces_folder_path, "*.jpg")):
-    print "Processing file: {}".format(f)
+    print "\t\tProcessing file: {}".format(f)
     try:
         image = face_recognition.load_image_file(f)
     except IOError as e:
         print "cannot open {0} becuase {1}".format(f, e)
         continue
-    faceDescriptor = face_recognition.face_encodings(image)[0]
+    try:
+        faceDescriptor = face_recognition.face_encodings(image)[0]
+    except IndexError as e:
+        print "cannot generate vectors for {0} becuase {1}".format(f, e)
+        continue
+
+
     # now push that vector into an array...
     niceName = getName(f)
     if niceName in faceDb:
         faceDb[niceName].append(faceDescriptor)
-        print "appending vectors"
-        print faceDescriptor
     else:
         faceDb[niceName] = []
         faceDb[niceName].append(faceDescriptor)
-        print "creating vectors"
 
 for faceName, faceVectors in faceDb.iteritems():
     reference = faceVectors[0]
-    print reference
-    for faceVector in faceVectors:
+    matches = [False] * 5
+    for count, faceVector in enumerate(faceVectors):
         if face_recognition.compare_faces([reference], faceVector):
-            print "Match"
+            matches[count] = True
         else:
             print "no match"
+    if matches.count(True) >= 4:
+        #we know we have 4 matches to reference
+        personDb[faceName] = reference
+        print "{0}'s face captured".format(faceName)
+    else:
+        print "ERROR NOT ENOUGH MATCHES FOR {0}".format(faceName)
 
+
+with open('facedb.pickle', 'wb') as pickleFile:
+    pickle.dump(personDb, pickleFile)
