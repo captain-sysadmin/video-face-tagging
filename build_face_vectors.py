@@ -43,13 +43,18 @@ faceDb = {}
 # Now process all the images
 for f in glob.glob(os.path.join(faces_folder_path, "*.jpg")):
     print "Processing file: {}".format(f)
-    image = face_recognition.load_image_file(f)
+    try:
+        image = face_recognition.load_image_file(f)
+    except IOError as e:
+        print "cannot open {0} becuase {1}".format(f, e)
+        continue
     faceDescriptor = face_recognition.face_encodings(image)[0]
     # now push that vector into an array...
     niceName = getName(f)
     if niceName in faceDb:
         faceDb[niceName].append(faceDescriptor)
         print "appending vectors"
+        print faceDescriptor
     else:
         faceDb[niceName] = []
         faceDb[niceName].append(faceDescriptor)
@@ -59,7 +64,7 @@ for faceName, faceVectors in faceDb.iteritems():
     reference = faceVectors[0]
     print reference
     for faceVector in faceVectors:
-        if face_recognition.compare_faces(reference, faceVector):
+        if face_recognition.compare_faces([reference], faceVector):
             print "Match"
         else:
             print "no match"
