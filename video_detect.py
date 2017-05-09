@@ -4,9 +4,11 @@
 # Iterrogate those screen grabs for faces
 # Check those faces against a list of known people
 #
+import os
+import glob
 import pickle
 import subprocess
-
+import face_recognition
 class recogniseFaces(object):
     '''A bunch of methods that allow a users to
     split a video into screen grabs, systematticaly go through
@@ -30,13 +32,22 @@ class recogniseFaces(object):
                 self.faceDb = pickle.load(dbFile)
         except IOError as e:
             print "can't open the face DB: {0}".format(e)
+    def getFrameNumber(self, filename):
+        '''Takes a filename and returns a frame number
+        '''
+
+        name = filename.split("/")[-1]
+        # now we should have 'faces_xxx.jpg'
+        name = name.split('.')[0]
+        number = name.split('_')[-1]
+        return int(number) * self.screenGrabInterval
 
 
-    def unpackVideo(self, filename, tmpDir = None):
+    def unpackVideo(self, filename):
         '''Takes a filename (path) and
         uses ffmpeg to extract frames to tmpDir
         '''
-        returnCode = subprocess.call('ffmpeg -i {0} -vf "select=not(mod(n\,{1}))" -vsync vfr -q:v 2 {2}faces_%03d.jpg'.format(filename, self.screenGrabInterval, tmpDir), shell=True)
+        returnCode = subprocess.call('ffmpeg -i {0} -vf "select=not(mod(n\,{1}))" -vsync vfr -q:v 2 {2}faces_%03d.jpg'.format(filename, self.screenGrabInterval, self.tmpDir), shell=True)
         if returnCode != 0:
             print "error, FFMPEG extraction failed. see STDOut"
             return False
@@ -44,3 +55,25 @@ class recogniseFaces(object):
         '''Go through the tempDir and pull out all the faces
         and then compare them to a known list
         '''
+        matches = {}
+        for f in glob.glob(os.path.join(self.tmpDir, "*.jpg")):
+	    try:
+		image = face_recognition.load_image_file(f)
+	    except IOError as e:
+		print "cannot open {0} becuase {1}".format(f, e)
+		continue
+	    try:
+		faceDescriptor = face_recognition.face_encodings(image)[0]
+	    except IndexError as e:
+		print "cannot generate vectors for {0} becuase {1}".format(f, e)
+		continue
+            print "found a face?"
+            for faceName, faceVector in self.faceDb.iteritems():
+                if face_recognition.compare_faces([faceDescriptor], faceVector):
+                    if faceName in matches:
+                        matches[faceName].append(self.getFrameNumber(f))
+                    else:
+                        matches[faceName] = [self.getFrameNumber(f)]
+        return matches
+
+
