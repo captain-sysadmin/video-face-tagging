@@ -1,7 +1,6 @@
 #coding=utf-8
 import os
 import sys
-import json
 import requests
 
 try:
@@ -11,11 +10,11 @@ except:
     print "please set the env-var CAPI_KEY with a valid key"
     sys.exit(3)
 r = requests.get('http://api.ft.com/sixdegrees/mostMentionedPeople?fromDate=2017-03-07&limit=100&apiKey={0}'.format(capiKey))
-if r.status_code == requests.codes.ok:
+if r.status_code == requests.codes.ok: #pylint: disable=no-member
     names = r.json()
 else:
     print "got a {0} error trying to talk to capi".format(r.status_code)
-    
+picturePath = '{0}/learningFaces'.format(os.getcwd())
 
 print names[0]
 for name in names:
@@ -31,10 +30,10 @@ for name in names:
     for count, image in enumerate(search.json()['value']):
         try:
             imageReq = requests.get(image['contentUrl'], stream=True)
-            with open("candidates/{0}-{1}.jpg".format(asciiName.replace(' ', '-'),count), 'wb') as imageFile:
+            if not os.path.exists('{0}/{1}'.format(picturePath, asciiName.replace(' ', '-'))):
+                os.mkdir('{0}/{1}'.format(picturePath, asciiName.replace(' ', '-')))
+            with open("{0}/{1}/{2}-{3}.jpg".format(picturePath ,asciiName.replace(' ', '-'),asciiName.replace(' ', '-'),count), 'wb') as imageFile:
                 for chunk in imageReq.iter_content(chunk_size=1024):
                     imageFile.write(chunk)
         except Exception as e:
             print "unable to save image: {0}".format(e)
-
-
