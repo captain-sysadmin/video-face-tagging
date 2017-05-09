@@ -63,17 +63,20 @@ class recogniseFaces(object):
 		print "cannot open {0} becuase {1}".format(f, e)
 		continue
 	    try:
-		faceDescriptor = face_recognition.face_encodings(image)[0]
+		faceDescriptor = face_recognition.face_encodings(image)
 	    except IndexError as e:
 		print "cannot generate vectors for {0} becuase {1}".format(f, e)
 		continue
-            print "found a face?"
-            for faceName, faceVector in self.faceDb.iteritems():
-                if face_recognition.compare_faces([faceDescriptor], faceVector):
-                    if faceName in matches:
-                        matches[faceName].append(self.getFrameNumber(f))
-                    else:
-                        matches[faceName] = [self.getFrameNumber(f)]
+            if len(faceDescriptor) != 0:
+                print "found a face in {0}".format(f)
+                for faceName, faceVector in self.faceDb.iteritems():
+                    output =  face_recognition.compare_faces(faceVector , faceDescriptor)
+                    if True in output:
+                        print faceName
+                        if faceName in matches:
+                            matches[faceName].append(self.getFrameNumber(f))
+                        else:
+                            matches[faceName] = [self.getFrameNumber(f)]
         return matches
 
 
